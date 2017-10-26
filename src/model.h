@@ -78,9 +78,14 @@ public:
     int ** z; // topic assignments for words, size M x doc.size()
     int ** nw; // cwt[i][j]: number of instances of word/term i assigned to topic j, size V x K
     int ** nd; // na[i][j]: number of words in document i assigned to topic j, size M x K
+	int *** nds; //nds[i][j][k]: number of words in sentance j of document i assigned to topic k, size M x Sdi x K
     int * nwsum; // nwsum[j]: total number of words assigned to topic j, size K
     int * ndsum; // nasum[i]: total number of words in document i, size M
+	int ** ndssum; //ndssum[i][j]: total number of words in sentance j of document i, size M x Sdi
+	int *** ndsc; //ndsc[i][j][k]: importance of k-pre sentance related to sentance j of document i
+	int ** ndscsum; //ndscsum[i][j]: total importance of pre sentances related to sentance j of document i
     double ** theta; // theta: document-topic distributions, size M x K
+	double *** aTheta; //aTheta: the document-sentence-topic distributions, size M x Sdi x K
     double ** phi; // phi: topic-word distributions, size K x V
     
     // for inference only
@@ -93,6 +98,7 @@ public:
     int * newnwsum;
     int * newndsum;
     double ** newtheta;
+	double *** newAtheta;
     double ** newphi;
     // --------------------------------------
     
