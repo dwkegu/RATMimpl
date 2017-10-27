@@ -54,54 +54,115 @@ model::~model() {
     }
 
     if (z) {
-	for (int m = 0; m < M; m++) {
-	    if (z[m]) {
-		delete z[m];
-	    }
-	}
+		for (int m = 0; m < M; m++) {
+			if (z[m]) {
+				delete []z[m];
+			}
+		}
+		delete[] z;
     }
     
     if (nw) {
 	for (int w = 0; w < V; w++) {
 	    if (nw[w]) {
-		delete nw[w];
+			delete nw[w];
 	    }
 	}
     }
 
     if (nd) {
-	for (int m = 0; m < M; m++) {
-	    if (nd[m]) {
-		delete nd[m];
-	    }
-	}
+		for (int m = 0; m < M; m++) {
+			if (nd[m]) {
+			delete []nd[m];
+			}
+		}
+		delete[] nd;
     } 
-    
+	if (nds) {
+		for (int m = 0; m < M; m++) {
+			if (nds[m]) {
+				for (int s = 0; s < Sd[m]; s++) {
+					if (nds[m]) {
+						delete[] nds[m][s];
+					}
+				}
+				delete[] nds[m];
+			}
+		}
+		delete[] nds;
+	}
     if (nwsum) {
-	delete nwsum;
+		delete[] nwsum;
     }   
     
     if (ndsum) {
-	delete ndsum;
+		delete[] ndsum;
     }
-    
-    if (theta) {
-	for (int m = 0; m < M; m++) {
-	    if (theta[m]) {
-		delete theta[m];
-	    }
+	if (ndssum) {
+		for (int m = 0; m < M; m++) {
+			if (ndssum[m]) {
+				delete[] ndssum[m];
+			}
+		}
+		delete[] ndssum;
 	}
+	if (ndsc) {
+		for (int m = 0; m < M; m++) {
+			if (ndsc[m]) {
+				for (int s = 0; s < Sd[m]; s++) {
+					if (ndsc[m][s]) {
+						delete[] ndsc[m][s];
+					}
+				}
+				delete[] ndsc[m];
+			}
+		}
+		delete[] ndsc;
+	}
+	if (ndscsum) {
+		for (int m = 0; m < M; m++) {
+			if (ndscsum[m]) {
+				delete[] ndscsum[m];
+			}
+		}
+	}
+    if (theta) {
+		for (int m = 0; m < M; m++) {
+			if (theta[m]) {
+				delete[] theta[m];
+			}
+		}
+		delete[] theta;
     }
+
+	if (aTheta) {
+		for (int m = 0; m < M; m++) {
+			if (aTheta[m]) {
+				for (int s = 0; s < Sd[m]; s++) {
+					if (aTheta[m][s]) {
+						delete[] aTheta[m][s];
+					}
+				}
+				delete[] aTheta[m];
+			}
+		}
+		delete[] aTheta;
+	}
     
     if (phi) {
-	for (int k = 0; k < K; k++) {
-	    if (phi[k]) {
-		delete phi[k];
-	    }
-	}
+		for (int k = 0; k < K; k++) {
+			if (phi[k]) {
+				delete[] phi[k];
+			}
+		}
+		delete[] phi;
     }
 
     // only for inference
+	if (newSd) {
+		delete[] newSd;
+	}
+
     if (newz) {
 	for (int m = 0; m < newM; m++) {
 	    if (newz[m]) {
@@ -125,6 +186,48 @@ model::~model() {
 	    }
 	}
     } 
+	if (newnds) {
+		for (int m = 0; m < newM; m++) {
+			if (newnds[m]) {
+				for (int s = 0; s < newSd[m]; s++) {
+					if (newnds[m][s]) {
+						delete[] newnds[m][s];
+					}
+				}
+				delete[] newnds[m];
+			}
+		}
+		delete[] newnds;
+	}
+	if (newndssum) {
+		for (int m = 0; m < newM; m++) {
+			if (newndssum[m]) {
+				delete[] newndssum[m];
+			}
+		}
+		delete[] newndssum;
+	}
+	if (newndsc) {
+		for (int m = 0; m < newM; m++) {
+			if (newndsc[m]) {
+				for (int s = 0; s = newSd[m]; s++) {
+					if (newndsc[m][s]) {
+						delete[] newndsc[m][n];
+					}
+				}
+				delete[] newndsc[m];
+			}
+		}
+		delete[] newndsc;
+	}
+	if (newndscsum) {
+		for (int m = 0; m < newM; m++) {
+			if (newndscsum[m]) {
+				delete[] newndscsum[m];
+			}
+		}
+		delete[] newndscsum;
+	}
     
     if (newnwsum) {
 	delete newnwsum;
@@ -141,6 +244,19 @@ model::~model() {
 	    }
 	}
     }
+	if (newAtheta) {
+		for (int m = 0; m < newM; m++) {
+			if (newAtheta[m]) {
+				for (int s = 0; s < newSd[m]; s++) {
+					if (newAtheta[m][s]) {
+						delete[] newAtheta[m][s];
+					}
+				}
+				delete[] newAtheta[m];
+			}
+		}
+		delete[] newAtheta;
+	}
     
     if (newphi) {
 	for (int k = 0; k < K; k++) {

@@ -74,6 +74,7 @@ public:
     int twords; // print out top words per each topic
     int withrawstrs;
 
+	int* Sd; //number of sentances in each document;
     double * p; // temp variable for sampling
     int ** z; // topic assignments for words, size M x doc.size()
     int ** nw; // cwt[i][j]: number of instances of word/term i assigned to topic j, size V x K
@@ -92,11 +93,16 @@ public:
     int inf_liter;
     int newM;
     int newV;
+	int *newSd;
     int ** newz;
     int ** newnw;
+	int *** newnds;
     int ** newnd;
     int * newnwsum;
     int * newndsum;
+	int ** newndssum;
+	int *** newndsc;
+	int ** newndscsum;
     double ** newtheta;
 	double *** newAtheta;
     double ** newphi;
