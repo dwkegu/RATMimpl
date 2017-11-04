@@ -67,6 +67,7 @@ public:
     int M; // dataset size (i.e., number of docs)
     int V; // vocabulary size
     int K; // number of topics
+	int C; // size of attention window
     double alpha, beta; // LDA hyperparameters 
     int niters; // number of Gibbs sampling iterations
     int liter; // the iteration at which the model was saved
@@ -75,8 +76,10 @@ public:
     int withrawstrs;
 
 	int* Sd; //number of sentances in each document;
-    double * p; // temp variable for sampling
-    int ** z; // topic assignments for words, size M x doc.size()
+    double * p1; // temp variable for sampling
+	double * p2;
+    int *** z; // topic assignments for words, size M x DsLength* Sdi
+	int *** at;// attention for each word of each sentance of each document
     int ** nw; // cwt[i][j]: number of instances of word/term i assigned to topic j, size V x K
     int ** nd; // na[i][j]: number of words in document i assigned to topic j, size M x K
 	int *** nds; //nds[i][j][k]: number of words in sentance j of document i assigned to topic k, size M x Sdi x K
@@ -93,8 +96,9 @@ public:
     int inf_liter;
     int newM;
     int newV;
+	int newC;
 	int *newSd;
-    int ** newz;
+    int *** newz;
     int ** newnw;
 	int *** newnds;
     int ** newnd;
@@ -152,7 +156,7 @@ public:
 	
     // estimate LDA model using Gibbs sampling
     void estimate();
-    int sampling(int m, int n);
+    int sampling(int m,int s, int n);
     void compute_theta();
     void compute_phi();
     

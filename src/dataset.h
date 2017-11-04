@@ -27,6 +27,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <list>
 
 using namespace std;
 
@@ -37,63 +38,152 @@ typedef map<int, string> mapid2word;
 
 class document {
 public:
-    int * words;
-    string rawstr;
+	//一篇文档的句子集合
+	int ** sentances;
+	//一篇文档的句子数量
+	int dsLength;
+	//一篇文档每个句子的单词数量
+	int *sLength;
     int length;
+	string rawStr;
+	//句子分隔符
+	char const sentanceSplit[3] = { '.','?','!'};
+	//小写单词范围
+	const int wordAsciiStart = 'a';
+	const int wordAsciiEnd = 'z';
+	const int wordAsciiUpperStart = 'A';
+	const int wordAsciiUpperEnd = 'Z';
+	const int word_connector = '-';
+	mapword2id* word2id;
     
     document() {
-	words = NULL;
-	rawstr = "";
-	length = 0;	
+		sentances = NULL;
+		dsLength = 0;
+		sLength = NULL;
+		length = 0;	
+		word2id = NULL;
     }
     
     document(int length) {
-	this->length = length;
-	rawstr = "";
-	words = new int[length];	
+		document();
+		this->dsLength = length;
     }
     
-    document(int length, int * words) {
-	this->length = length;
-	rawstr = "";
-	this->words = new int[length];
-	for (int i = 0; i < length; i++) {
-	    this->words[i] = words[i];
+	document(int length, int *sLenght, int ** sentances) {
+		document();
+		this->dsLength = length;
+		this->sLength = new int[length];
+		for (int i = 0; i < length; i++) {
+			this->sLength[i] = sLenght[i];
 	}
+	this->sentances = new int*[length];
+		for (int i = 0; i < length; i++) {
+			this->sentances[i] = new int[sLenght[i]];
+			for (int j = 0; j < sLenght[i]; j++) {
+				this->sentances[i][j] = sentances[i][j];
+			}
+		}
     }
 
-    document(int length, int * words, string rawstr) {
-	this->length = length;
-	this->rawstr = rawstr;
-	this->words = new int[length];
-	for (int i = 0; i < length; i++) {
-	    this->words[i] = words[i];
-	}
+    document(string rawstr, mapword2id* &word2id) {
+		document();
+		this->word2id = word2id;
+		this->rawStr = rawstr;
+		initRawStr();
     }
+	document(int** wordsId, int sentanceCount, int *wordsCount) {
+		document();
+		this->dsLength = sentanceCount;
+		this->sLength = new int[sentanceCount];
+		for (int i = 0; i < sentanceCount; i++) {
+			this->sLength[i] = wordsCount[i];
+		}
+		sentances = new int*[sentanceCount];
+		for (int i = 0; i < sentanceCount; i++) {
+			sentances[i] = new int[wordsCount[i]];
+			for (int j = 0; j < wordsCount[i]; j++) {
+				sentances[i][j] = wordsId[i][j];
+			}
+		}
+	}
     
-    document(vector<int> & doc) {
-	this->length = doc.size();
-	rawstr = "";
-	this->words = new int[length];
-	for (int i = 0; i < length; i++) {
-	    this->words[i] = doc[i];
-	}
-    }
-
-    document(vector<int> & doc, string rawstr) {
-	this->length = doc.size();
-	this->rawstr = rawstr;
-	this->words = new int[length];
-	for (int i = 0; i < length; i++) {
-	    this->words[i] = doc[i];
-	}
-    }
-    
+ 
+ 
     ~document() {
-	if (words) {
-	    delete words;
-	}
+		//todo 释放内存
     }
+	//全部转换成小写
+	void toLower() {
+		for (int i = 0; i < rawStr.length; i++) {
+			if (rawStr.at(i) >= wordAsciiUpperStart&&rawStr.at(i) <= wordAsciiUpperEnd) {
+				char c = rawStr.at(i);
+				c += ('a' - 'A');
+				string temp(1, c);
+				rawStr.replace(i, 1, temp);
+			}
+		}
+	}
+private:
+	void initRawStr() {
+		int offset = 0;
+		int fop1 = 0;
+		int fop2 = 0;
+		int fop3 = 0;
+		//统计句子数量
+		int _sentanceCount = 0;
+		toLower();
+		list<int> _wordCount;
+		list<list<int>> words;
+		while (offset < rawStr.length()) {
+			fop1 = rawStr.find_first_of(sentanceSplit[0], offset);
+			fop1 = rawStr.find_first_of(sentanceSplit[1], offset);
+			fop3 = rawStr.find_first_of(sentanceSplit[2], offset);
+			int min = fop1;
+			min = min > fop2 ? fop2 : min;
+			min = min > fop3 ? fop3 : min;
+			list<int> *wordList = getWordCount(rawStr.substr(offset, min - offset));
+			words.push_back(*wordList);
+			_wordCount.push_back(wordList->size());
+			_sentanceCount++;
+			offset = min;
+		}
+		this->dsLength = _sentanceCount;
+		sentances = new int*[_sentanceCount];
+		this->sLength = new int[dsLength];
+		for (int i = 0; i < _sentanceCount; i++) {
+			sentances[i] = new int[_wordCount.front()];
+			sLength[i] = _wordCount.front();
+			_wordCount.pop_front();
+			list<int> sentWords = words.front();
+			words.pop_front();
+			for (int j = 0; j < sLength[i]; j++) {
+				sentances[i][j] = sentWords.front();
+				sentWords.pop_front();
+			}
+		}
+	}
+	//统计一个字符串的单词数量
+	//todo 完成单词提取
+	list<int>* getWordCount(string sentance) {
+		int offset = 0;
+		int pos = 0;
+		int count = 0;
+		list<int> *_wordsId = new list<int>;
+		while (pos < sentance.length()) {
+			if (sentance.at(pos) >= wordAsciiStart&&sentance.at(pos) <= wordAsciiEnd) {
+				pos++;
+			}
+			else {
+				if (pos > offset) {
+					count++;
+					_wordsId->push_back(word2id->at(sentance.substr(offset, pos - offset)));
+				}
+				pos++;
+				offset = pos;
+			}
+		}
+		return _wordsId;
+	}
 };
 
 class dataset {

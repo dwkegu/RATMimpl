@@ -39,6 +39,7 @@ int utils::parse_args(int argc, char ** argv, model * pmodel) {
     double alpha = -1.0;
     double beta = -1.0;
     int K = 0;
+	int C = 0;
     int niters = 0;
     int savestep = 0;
     int twords = 0;
@@ -75,7 +76,9 @@ int utils::parse_args(int argc, char ** argv, model * pmodel) {
 	} else if (arg == "-ntopics") {
 	    K = atoi(argv[++i]);	    
 	    
-	} else if (arg == "-niters") {
+	}else if (arg == "-Cwindow") {
+		C = atoi(argv[++i]);
+	}else if (arg == "-niters") {
 	    niters = atoi(argv[++i]);	    
 	    
 	} else if (arg == "-savestep") {
@@ -104,6 +107,11 @@ int utils::parse_args(int argc, char ** argv, model * pmodel) {
 	
 	if (K > 0) {
 	    pmodel->K = K;
+	}
+
+	if (C > 0) {
+		pmodel->C = C;
+		pmodel->newC = C;
 	}
 	
 	if (alpha >= 0.0) {

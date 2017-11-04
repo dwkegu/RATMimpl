@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (C) 2007 by
  * 
  * 	Xuan-Hieu Phan
@@ -41,9 +41,12 @@
 using namespace std;
 
 model::~model() {
-    if (p) {
-	delete p;
+    if (p1) {
+		delete p2;
     }
+	if (p2) {
+		delete p2;
+	}
 
     if (ptrndata) {
 	delete ptrndata;
@@ -212,7 +215,7 @@ model::~model() {
 			if (newndsc[m]) {
 				for (int s = 0; s = newSd[m]; s++) {
 					if (newndsc[m][s]) {
-						delete[] newndsc[m][n];
+						delete[] newndsc[m][s];
 					}
 				}
 				delete[] newndsc[m];
@@ -290,6 +293,7 @@ void model::set_default_values() {
     M = 0;
     V = 0;
     K = 100;
+	C = 4;
     alpha = 50.0 / K;
     beta = 0.1;
     niters = 2000;
@@ -298,20 +302,31 @@ void model::set_default_values() {
     twords = 0;
     withrawstrs = 0;
     
+	Sd = NULL;
     p = NULL;
     z = NULL;
     nw = NULL;
     nd = NULL;
+	nds = NULL;
+	ndsc = NULL;
+	ndssum = NULL;
+	ndscsum = NULL;
     nwsum = NULL;
     ndsum = NULL;
     theta = NULL;
     phi = NULL;
     
+	newSd = NULL;
     newM = 0;
     newV = 0;
+	newC = 0;
     newz = NULL;
     newnw = NULL;
     newnd = NULL;
+	newnds = NULL;
+	newndssum = NULL;
+	newndsc = NULL;
+	newndscsum = NULL;
     newnwsum = NULL;
     newndsum = NULL;
     newtheta = NULL;
@@ -364,7 +379,7 @@ int model::load_model(string model_name) {
     string line;
 
     // allocate memory for z and ptrndata
-    z = new int*[M];
+    z = new int**[M];
     ptrndata = new dataset(M);
     ptrndata->V = V;
 
@@ -395,13 +410,16 @@ int model::load_model(string model_name) {
 		}
 	
 		// allocate and add new document to the corpus
-		document * pdoc = new document(words);
+		//todo
+		document * pdoc = new document(words.size());
 		ptrndata->add_doc(pdoc, i);
 	
 		// assign values for z
-		z[i] = new int[topics.size()];
-		for (j = 0; j < topics.size(); j++) {
-			z[i][j] = topics[j];
+		z[i] = new int*[ptrndata->docs[i]->dsLength];
+		for (j = 0; j < ptrndata->docs[i]->dsLength; j++) {
+			for (int n = 0; n < ptrndata->docs[i]->sLength[j]; n++) {
+				z[i][j][n] = topics[j];
+			}
 		}
     }   
     
@@ -448,7 +466,8 @@ int model::save_model_tassign(string filename) {
     // wirte docs with topic assignments for words
     for (i = 0; i < ptrndata->M; i++) {    
 	for (j = 0; j < ptrndata->docs[i]->length; j++) {
-	    fprintf(fout, "%d:%d ", ptrndata->docs[i]->words[j], z[i][j]);
+		//todo
+	   // fprintf(fout, "%d:%d ", ptrndata->docs[i]->words[j], z[i][j]);
 	}
 	fprintf(fout, "\n");
     }
@@ -591,7 +610,8 @@ int model::save_inf_model_tassign(string filename) {
     // wirte docs with topic assignments for words
     for (i = 0; i < pnewdata->M; i++) {    
 	for (j = 0; j < pnewdata->docs[i]->length; j++) {
-	    fprintf(fout, "%d:%d ", pnewdata->docs[i]->words[j], newz[i][j]);
+	//todo
+	 //   fprintf(fout, "%d:%d ", pnewdata->docs[i]->words[j], newz[i][j]);
 	}
 	fprintf(fout, "\n");
     }
@@ -705,9 +725,10 @@ int model::save_inf_model_twords(string filename) {
 
 
 int model::init_est() {
-    int m, n, w, k;
+    int m,s, n, w, k;
 
-    p = new double[K];
+    p1 = new double[K];
+	p2 = new double[C];
 
     // + read training data
     ptrndata = new dataset;
@@ -748,32 +769,93 @@ int model::init_est() {
     for (m = 0; m < M; m++) {
 	ndsum[m] = 0;
     }
+	//初始化每篇文章中句子数量
+	Sd = new int[M];
+	for (m = 0; m < M; m++) {
+		Sd[m] = ptrndata->docs[m]->dsLength;
+	}
+	//初始化文章m,句子s中分配到主题k中的单词数量
+	nds = new int**[M];
+	for (m = 0; m < M; m++) {
+		nds[m] = new int*[Sd[m]];
+		for (s = 0; s < Sd[m]; s++) {
+			nds[m][s] = new int[K];
+			for (int k = 0; k < K; k++) {
+				nds[m][s][k] = 0;
+			}
+		}
+	}
+	//初始化文章m,句子s的单词个数
+	ndssum = new int*[M];
+	for (m = 0; m < M; m++) {
+		ndssum[m] = new int[Sd[m]];
+		for (s = 0; s < Sd[m]; s++) {
+			ndssum[m][s] = 0;
+		}
+	}
+	//初始化文章m，句子s的Attention
+	ndsc = new int**[M];
+	for (m = 0; m < M; m++) {
+		ndsc[m] = new int*[Sd[m]];
+		for (s = 0; s < Sd[m]; s++) {
+			ndsc[m][s] = new int[C];
+			for (int c = 0; c < C; c++) {
+				ndsc[m][s][c] = 0;
+			}
+		}
+	}
+	//initialize the attention count of a sentance s in document m;
+	ndscsum = new int*[M];
+	for (m = 0; m < M; n++) {
+		ndscsum[m] = new int[Sd[m]];
+		for (s = 0; s < Sd[m]; s++) {
+			ndscsum[m][s] = 0;
+		}
+	}
+
 
     srand(time(0)); // initialize for random number generation
-    z = new int*[M];
+	//initialize the topic of each word in sentance s of document m
+    z = new int**[M];
+	at = new int**[M];
     for (m = 0; m < ptrndata->M; m++) {
-		int N = ptrndata->docs[m]->length;
-		z[m] = new int[N];
-	
-        // initialize for z
-        for (n = 0; n < N; n++) {
-    	    int topic = (int)(((double)rand() / RAND_MAX) * K);
-    	    z[m][n] = topic;
-    	    
-    	    // number of instances of word i assigned to topic j
-    	    nw[ptrndata->docs[m]->words[n]][topic] += 1;
-    	    // number of words in document i assigned to topic j
-    	    nd[m][topic] += 1;
-    	    // total number of words assigned to topic j
-    	    nwsum[topic] += 1;
-        } 
-        // total number of words in document i
-        ndsum[m] = N;      
+		int* &_Sd = ptrndata->docs[m]->sLength;
+		int sCount = ptrndata->docs[m]->dsLength;
+		z[m] = new int*[sCount];
+		z[m] = new int*[sCount];
+		for (s = 0; s < sCount; ) {
+			z[m][s] = new int[_Sd[s]];
+			z[m][s] = new int[_Sd[s]];
+			for (n = 0; n < _Sd[s]; n++) {
+				int topic = (int)(((double)rand() / RAND_MAX) * K);
+				z[m][s][n] = topic;
+				//word n assigned to topic , plus 1 p(w|z)
+				nw[ptrndata->docs[m]->sentances[s][n]][topic] += 1;
+				nwsum[topic] += 1;
+				//p(z|θ)
+				nd[m][topic] += 1;
+				ndsum[m] = +1;
+				//p(z|θsi)
+				nds[m][s][topic] += 1;
+				ndssum[m][s] += 1;
+				//随机分配attention
+				int _at = (int)(((double)rand() / RAND_MAX) * C);
+				at[m][s][n] = _at;
+				ndsc[m][s][_at] = 1;
+				ndscsum[m][s] += 1;
+			}
+		}
+			    
     }
+
+
     
-    theta = new double*[M];
+    aTheta = new double**[M];
     for (m = 0; m < M; m++) {
-        theta[m] = new double[K];
+        aTheta[m] = new double*[ptrndata->docs[m]->dsLength];
+		for (s = 0; s < ptrndata->docs[m]->dsLength; s++) {
+			aTheta[m][s] = new double[K];
+		}
     }
 	
     phi = new double*[K];
@@ -786,7 +868,7 @@ int model::init_est() {
 
 int model::init_estc() {
     // estimating the model from a previously estimated one
-    int m, n, w, k;
+    int m,s, n, w, k;
 
     p = new double[K];
 
@@ -796,60 +878,112 @@ int model::init_estc() {
 	return 1;
     }
 
-    nw = new int*[V];
-    for (w = 0; w < V; w++) {
-        nw[w] = new int[K];
-        for (k = 0; k < K; k++) {
-    	    nw[w][k] = 0;
-        }
-    }
-	
-    nd = new int*[M];
-    for (m = 0; m < M; m++) {
-        nd[m] = new int[K];
-        for (k = 0; k < K; k++) {
-    	    nd[m][k] = 0;
-        }
-    }
-	
-    nwsum = new int[K];
-    for (k = 0; k < K; k++) {
-	nwsum[k] = 0;
-    }
-    
-    ndsum = new int[M];
-    for (m = 0; m < M; m++) {
-	ndsum[m] = 0;
-    }
+	nw = new int*[V];
+	for (w = 0; w < V; w++) {
+		nw[w] = new int[K];
+		for (k = 0; k < K; k++) {
+			nw[w][k] = 0;
+		}
+	}
 
-    for (m = 0; m < ptrndata->M; m++) {
-	int N = ptrndata->docs[m]->length;
+	nd = new int*[M];
+	for (m = 0; m < M; m++) {
+		nd[m] = new int[K];
+		for (k = 0; k < K; k++) {
+			nd[m][k] = 0;
+		}
+	}
 
-	// assign values for nw, nd, nwsum, and ndsum	
-        for (n = 0; n < N; n++) {
-    	    int w = ptrndata->docs[m]->words[n];
-    	    int topic = z[m][n];
-    	    
-    	    // number of instances of word i assigned to topic j
-    	    nw[w][topic] += 1;
-    	    // number of words in document i assigned to topic j
-    	    nd[m][topic] += 1;
-    	    // total number of words assigned to topic j
-    	    nwsum[topic] += 1;
-        } 
-        // total number of words in document i
-        ndsum[m] = N;      
-    }
-	
-    theta = new double*[M];
-    for (m = 0; m < M; m++) {
-        theta[m] = new double[K];
-    }
-	
-    phi = new double*[K];
-    for (k = 0; k < K; k++) {
-        phi[k] = new double[V];
-    }    
+	nwsum = new int[K];
+	for (k = 0; k < K; k++) {
+		nwsum[k] = 0;
+	}
+
+	ndsum = new int[M];
+	for (m = 0; m < M; m++) {
+		ndsum[m] = 0;
+	}
+	//初始化每篇文章中句子数量
+	Sd = new int[M];
+	for (m = 0; m < M; m++) {
+		Sd[m] = ptrndata->docs[m]->dsLength;
+	}
+	//初始化文章m,句子s中分配到主题k中的单词数量
+	nds = new int**[M];
+	for (m = 0; m < M; m++) {
+		nds[m] = new int*[Sd[m]];
+		for (s = 0; s < Sd[m]; s++) {
+			nds[m][s] = new int[K];
+			for (int k = 0; k < K; k++) {
+				nds[m][s][k] = 0;
+			}
+		}
+	}
+	//初始化文章m,句子s的单词个数
+	ndssum = new int*[M];
+	for (m = 0; m < M; m++) {
+		ndssum[m] = new int[Sd[m]];
+		for (s = 0; s < Sd[m]; s++) {
+			ndssum[m][s] = 0;
+		}
+	}
+	//初始化文章m，句子s的Attention
+	ndsc = new int**[M];
+	for (m = 0; m < M; m++) {
+		ndsc[m] = new int*[Sd[m]];
+		for (s = 0; s < Sd[m]; s++) {
+			ndsc[m][s] = new int[C];
+			for (int c = 0; c < C; c++) {
+				ndsc[m][s][c] = 0;
+			}
+		}
+	}
+	//initialize the attention count of a sentance s in document m;
+	ndscsum = new int*[M];
+	for (m = 0; m < M; n++) {
+		ndscsum[m] = new int[Sd[m]];
+		for (s = 0; s < Sd[m]; s++) {
+			ndscsum[m][s] = 0;
+		}
+	}
+
+
+	z = new int**[M];
+	for (m = 0; m < ptrndata->M; m++) {
+		int* &_Sd = ptrndata->docs[m]->sLength;
+		int sCount = ptrndata->docs[m]->dsLength;
+		z[m] = new int*[sCount];
+		for (s = 0; s < sCount; ) {
+			z[m][s] = new int[_Sd[s]];
+			for (n = 0; n < _Sd[s]; n++) {
+				int word = ptrndata->docs[m]->sentances[s][n];
+				int topic = z[m][s][n];
+				//word n assigned to topic , plus 1 p(w|z)
+				nw[word][topic] += 1;
+				nwsum[topic] += 1;
+				//p(z|θ)
+				nd[m][topic] += 1;
+				ndsum[m] = +1;
+				//p(z|θsi)
+				nds[m][s][topic] += 1;
+				ndssum[m][s] += 1;
+			}
+		}
+
+	}
+
+	aTheta = new double**[M];
+	for (m = 0; m < M; m++) {
+		aTheta[m] = new double*[ptrndata->docs[m]->dsLength];
+		for (s = 0; s < ptrndata->docs[m]->dsLength; s++) {
+			aTheta[m][s] = new double[K];
+		}
+	}
+
+	phi = new double*[K];
+	for (k = 0; k < K; k++) {
+		phi[k] = new double[V];
+	}
 
     return 0;        
 }
@@ -864,27 +998,28 @@ void model::estimate() {
 
     int last_iter = liter;
     for (liter = last_iter + 1; liter <= niters + last_iter; liter++) {
-	printf("Iteration %d ...\n", liter);
+		printf("Iteration %d ...\n", liter);
 	
-	// for all z_i
-	for (int m = 0; m < M; m++) {
-	    for (int n = 0; n < ptrndata->docs[m]->length; n++) {
-		// (z_i = z[m][n])
-		// sample from p(z_i|z_-i, w)
-		int topic = sampling(m, n);
-		z[m][n] = topic;
-	    }
-	}
+		// for all z_i
+		for (int m = 0; m < M; m++) {
+			for (int s = 0; s < ptrndata->docs[m]->dsLength; s++) {
+				for (int n = 0; n < ptrndata->docs[m]->sLength[s]; n++) {
+					int topic = sampling(m, s, n);
+					z[m][s][n] = topic;
+				}
+			}
+			
+		}
 	
-	if (savestep > 0) {
-	    if (liter % savestep == 0) {
-		// saving the model
-		printf("Saving the model at iteration %d ...\n", liter);
-		compute_theta();
-		compute_phi();
-		save_model(utils::generate_model_name(liter));
-	    }
-	}
+		if (savestep > 0) {
+			if (liter % savestep == 0) {
+			// saving the model
+			printf("Saving the model at iteration %d ...\n", liter);
+			compute_theta();
+			compute_phi();
+			save_model(utils::generate_model_name(liter));
+			}
+		}
     }
     
     printf("Gibbs sampling completed!\n");
@@ -895,33 +1030,55 @@ void model::estimate() {
     save_model(utils::generate_model_name(-1));
 }
 
-int model::sampling(int m, int n) {
+int model::sampling(int m, int s, int n) {
     // remove z_i from the count variables
-    int topic = z[m][n];
-    int w = ptrndata->docs[m]->words[n];
+    int topic = z[m][s][n];
+	int atC = at[m][s][n];
+    int w = ptrndata->docs[m]->sentances[s][n];
     nw[w][topic] -= 1;
     nd[m][topic] -= 1;
+	nds[m][s][topic] -= 1;
+	ndssum[m][s] -= 1;
     nwsum[topic] -= 1;
     ndsum[m] -= 1;
+	ndsc[m][s][atC] -= 1;
+	ndsc[m][s] -= 1;
+
+	//choose a topic distribution with probability \epsilon_i
+	
+	
+	for (int c = 1; c < C; c++) {
+		attention[c] += attention[c - 1];
+	}
+	double sel = ((double)rand() / RAND_MAX)* attention[C - 1];
+	for (int at = 0; at < C; at++) {
+		if (sel < attention[at]) {
+			break;
+		}
+	}
+	
 
     double Vbeta = V * beta;
     double Kalpha = K * alpha;    
     // do multinomial sampling via cumulative method
-    for (int k = 0; k < K; k++) {
-	p[k] = (nw[w][k] + beta) / (nwsum[k] + Vbeta) *
-		    (nd[m][k] + alpha) / (ndsum[m] + Kalpha);
-    }
+	for (int c = 0; c < C; c++) {
+		for (int k = 0; k < K; k++) {
+			p[c][k] = (nw[w][k] + beta) / (nwsum[k] + Vbeta) *
+				(nd[m][k] + alpha) / (ndsum[m] + Kalpha);
+		}
+	}
+    
     // cumulate multinomial parameters
     for (int k = 1; k < K; k++) {
-	p[k] += p[k - 1];
+		p[k] += p[k - 1];
     }
     // scaled sample because of unnormalized p[]
     double u = ((double)rand() / RAND_MAX) * p[K - 1];
     
     for (topic = 0; topic < K; topic++) {
-	if (p[topic] > u) {
-	    break;
-	}
+		if (p[topic] > u) {
+			break;
+		}
     }
     
     // add newly estimated z_i to count variables
@@ -994,18 +1151,18 @@ int model::init_inf() {
 		// assign values for nw, nd, nwsum, and ndsum	
         for (n = 0; n < N; n++) {
     	    int w = ptrndata->docs[m]->words[n];
-			//z ����λ�ȡ�ģ����ĵ��ж�Ӧ�ĵ�������������
+			//z 是如何获取的，即文档中对应的单词所属的主题
     	    int topic = z[m][n];
     	    
     	    // number of instances of word i assigned to topic j
-			//���ݼ���ÿ�����ʶ�Ӧ���������ͳ��
+			//数据集中每个单词对应主题次数的统计
     	    nw[w][topic] += 1;
     	    // number of words in document i assigned to topic j
-			//���ݼ���ÿ���ĵ�������ִ�����ͳ��
+			//数据集中每个文档主题出现次数的统计
     	    nd[m][topic] += 1;
 
     	    // total number of words assigned to topic j
-			// ���ݼ���ÿ������ĳ��ִ���
+			// 数据集中每个主题的出现次数
     	    nwsum[topic] += 1;
         } 
         // total number of words in document i
