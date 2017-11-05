@@ -303,7 +303,8 @@ void model::set_default_values() {
     withrawstrs = 0;
     
 	Sd = NULL;
-    p = NULL;
+    p1 = NULL;
+	p2 = NULL;
     z = NULL;
     nw = NULL;
     nd = NULL;
@@ -839,7 +840,10 @@ int model::init_est() {
 				nds[m][s][topic] += 1;
 				ndssum[m][s] += 1;
 				//随机分配attention
-				int _at = (int)(((double)rand() / RAND_MAX) * C);
+				int _at = (int)((((double)rand() / RAND_MAX) * C));
+				if (n < C-1) {
+					_at = n;
+				}
 				at[m][s][n] = _at;
 				ndsc[m][s][_at] = 1;
 				ndscsum[m][s] += 1;
@@ -869,8 +873,12 @@ int model::init_est() {
 int model::init_estc() {
     // estimating the model from a previously estimated one
     int m,s, n, w, k;
-
-    p = new double[K];
+	if (NULL == p1) {
+		p1 = new double[K];
+	}
+	if(NULL==p2) {
+		p2 = new double[C];
+	}	
 
     // load moel, i.e., read z and ptrndata
     if (load_model(model_name)) {
@@ -1004,7 +1012,9 @@ void model::estimate() {
 		for (int m = 0; m < M; m++) {
 			for (int s = 0; s < ptrndata->docs[m]->dsLength; s++) {
 				for (int n = 0; n < ptrndata->docs[m]->sLength[s]; n++) {
-					int topic = sampling(m, s, n);
+					int attention = samplingAttention(m, s, n);
+					at[m][s][n] = attention;
+					int topic = samplingTopic(m, s, n);
 					z[m][s][n] = topic;
 				}
 			}
@@ -1016,6 +1026,7 @@ void model::estimate() {
 			// saving the model
 			printf("Saving the model at iteration %d ...\n", liter);
 			compute_theta();
+			compute_aTheta();
 			compute_phi();
 			save_model(utils::generate_model_name(liter));
 			}
@@ -1025,12 +1036,45 @@ void model::estimate() {
     printf("Gibbs sampling completed!\n");
     printf("Saving the final model!\n");
     compute_theta();
+	compute_aTheta();
     compute_phi();
     liter--;
     save_model(utils::generate_model_name(-1));
 }
 
-int model::sampling(int m, int s, int n) {
+
+int model::samplingAttention(int m, int s, int n){
+	int atC = at[m][s][n];
+	int w = ptrndata->docs[m]->sentances[s][n];
+
+	ndsc[m][s][atC] -= 1;
+	ndscsum[m][s] -= 1;
+	//choose a topic distribution with probability \epsilon_i
+
+
+	for (atC = 0; atC < C; atC++) {
+		p2[atC] = 0;
+		if(atC==0)
+		for (int k = 0; k < K; k++) {
+			p2[atC] += (nw[w][k] + beta) / (nwsum[k] + V*beta)*
+				(nds[m][s - atC][k] + alpha) / (ndssum[m][s - atC] + K*alpha)*
+				(ndsc[m][s][atC] + pi) / (ndscsum[m][s] + C*pi);
+		}
+	}
+	for (int c = 1; c < C; c++) {
+		p2[c] += p2[c - 1];
+	}
+	double sel = ((double)rand() / RAND_MAX) / p2[C - 1];
+	for (atC = 0; atC < C; atC++) {
+		if (sel < p2[atC]) {
+			break;
+		}
+	}
+	ndsc[m][s][atC] += 1;
+	ndsc[m][s][atC] += 1;
+}
+
+int model::samplingTopic(int m, int s, int n) {
     // remove z_i from the count variables
     int topic = z[m][s][n];
 	int atC = at[m][s][n];
@@ -1041,42 +1085,30 @@ int model::sampling(int m, int s, int n) {
 	ndssum[m][s] -= 1;
     nwsum[topic] -= 1;
     ndsum[m] -= 1;
-	ndsc[m][s][atC] -= 1;
-	ndsc[m][s] -= 1;
-
-	//choose a topic distribution with probability \epsilon_i
-	
-	
-	for (int c = 1; c < C; c++) {
-		attention[c] += attention[c - 1];
-	}
-	double sel = ((double)rand() / RAND_MAX)* attention[C - 1];
-	for (int at = 0; at < C; at++) {
-		if (sel < attention[at]) {
-			break;
-		}
-	}
-	
 
     double Vbeta = V * beta;
     double Kalpha = K * alpha;    
     // do multinomial sampling via cumulative method
-	for (int c = 0; c < C; c++) {
-		for (int k = 0; k < K; k++) {
-			p[c][k] = (nw[w][k] + beta) / (nwsum[k] + Vbeta) *
+	for (int k = 0; k < K; k++) {
+		if (atC = 0||s-atC<0) {
+			p1[k] = (nw[w][k] + beta) / (nwsum[k] + Vbeta) *
 				(nd[m][k] + alpha) / (ndsum[m] + Kalpha);
+		}
+		else {
+			p1[k] = (nw[w][k] + beta) / (nwsum[k] + Vbeta) *
+				(nds[m][s-atC][k] + alpha) / (ndssum[m][s-atC] + Kalpha);
 		}
 	}
     
     // cumulate multinomial parameters
     for (int k = 1; k < K; k++) {
-		p[k] += p[k - 1];
+		p1[k] += p1[k - 1];
     }
     // scaled sample because of unnormalized p[]
-    double u = ((double)rand() / RAND_MAX) * p[K - 1];
+    double u = ((double)rand() / RAND_MAX) * p1[K - 1];
     
     for (topic = 0; topic < K; topic++) {
-		if (p[topic] > u) {
+		if (p1[topic] > u) {
 			break;
 		}
     }
@@ -1085,7 +1117,9 @@ int model::sampling(int m, int s, int n) {
     nw[w][topic] += 1;
     nd[m][topic] += 1;
     nwsum[topic] += 1;
-    ndsum[m] += 1;    
+    ndsum[m] += 1;
+	nds[m][s][topic] += 1;
+	ndssum[m][s] += 1;
     
     return topic;
 }
@@ -1098,6 +1132,10 @@ void model::compute_theta() {
     }
 }
 
+void model::compute_aTheta() {
+
+}
+
 void model::compute_phi() {
     for (int k = 0; k < K; k++) {
 	for (int w = 0; w < V; w++) {
@@ -1107,10 +1145,16 @@ void model::compute_phi() {
 }
 
 int model::init_inf() {
+	/*
     // estimating the model from a previously estimated one
     int m, n, w, k;
-
-    p = new double[K];
+	if (NULL == p1) {
+		p1 = new double[K];
+	}
+	if (NULL == p2) {
+		p2 = new double[C];
+	}
+    
 
     // load moel, i.e., read z and ptrndata
     if (load_model(model_name)) {
@@ -1245,11 +1289,12 @@ int model::init_inf() {
     for (k = 0; k < K; k++) {
         newphi[k] = new double[newV];
     }    
-    
+    */
     return 0;        
 }
 
 void model::inference() {
+	/*
     if (twords > 0) {
 	// print out top words per topic
 	dataset::read_wordmap(dir + wordmapfile, &id2word);
@@ -1277,9 +1322,11 @@ void model::inference() {
     compute_newphi();
     inf_liter--;
     save_inf_model(dfile);
+	*/
 }
 
 int model::inf_sampling(int m, int n) {
+	/*
     // remove z_i from the count variables
     int topic = newz[m][n];
     int w = pnewdata->docs[m]->words[n];
@@ -1314,8 +1361,8 @@ int model::inf_sampling(int m, int n) {
     newnd[m][topic] += 1;
     newnwsum[topic] += 1;
     newndsum[m] += 1;    
-    
     return topic;
+	*/
 }
 
 void model::compute_newtheta() {

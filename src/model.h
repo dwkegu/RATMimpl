@@ -68,7 +68,7 @@ public:
     int V; // vocabulary size
     int K; // number of topics
 	int C; // size of attention window
-    double alpha, beta; // LDA hyperparameters 
+    double pi, alpha, beta; // LDA hyperparameters 
     int niters; // number of Gibbs sampling iterations
     int liter; // the iteration at which the model was saved
     int savestep; // saving period
@@ -156,8 +156,10 @@ public:
 	
     // estimate LDA model using Gibbs sampling
     void estimate();
-    int sampling(int m,int s, int n);
+    int samplingTopic(int m,int s, int n);
+	int samplingAttention(int m, int s, int n);
     void compute_theta();
+	void compute_aTheta();
     void compute_phi();
     
     // init for inference

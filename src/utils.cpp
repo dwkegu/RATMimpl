@@ -38,6 +38,7 @@ int utils::parse_args(int argc, char ** argv, model * pmodel) {
     string dfile = "";
     double alpha = -1.0;
     double beta = -1.0;
+	double pi = -1.0;
     int K = 0;
 	int C = 0;
     int niters = 0;
@@ -73,7 +74,11 @@ int utils::parse_args(int argc, char ** argv, model * pmodel) {
 	} else if (arg == "-beta") {
 	    beta = atof(argv[++i]);	    
 	    
-	} else if (arg == "-ntopics") {
+	}
+	else if (arg == "-pi") {
+		pi = atof(argv[++i]);
+	}
+	else if (arg == "-ntopics") {
 	    K = atoi(argv[++i]);	    
 	    
 	}else if (arg == "-Cwindow") {
@@ -123,6 +128,13 @@ int utils::parse_args(int argc, char ** argv, model * pmodel) {
 	
 	if (beta >= 0.0) {
 	    pmodel->beta = beta;
+	}
+
+	if (pi > 0) {
+		pmodel->pi = pi;
+	}
+	else {
+		pmodel->pi = 5.0 / pmodel->C;
 	}
 	
 	if (niters > 0) {
