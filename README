@@ -1,16 +1,16 @@
 ****************************************************************************
 
-                              GibbsLDA++
-       A C/C++ Implementation of Latent Dirichlet Allocation (LDA) 
-       using Gibbs Sampling for Parameter Estimation and Inference
+                              GibbsRATM
+       A C/C++ Implementation of Recurrent Attentional Topic model(RATM) base on the GibbsLDA++
+       using Gibbs Sampling for Parameter Estimation and Inference.
 
-                   http://gibbslda.sourceforge.net/
+                   https://github.com/dwkegu/RATMimpl/
 
-                         Copyright (C) 2007 by
-                            Xuan-Hieu Phan
-            hieuxuan@ecei.tohoku.ac.jp or pxhieu@gmail.com
-                Graduate School of Information Sciences
-                          Tohoku University
+                         Copyright (C) 2017 by
+                            Shunfeng Peng
+            dwkegu@sjtu.edu.cn or dwkegu@gmail.com
+                Graduate School of Computer Sciences
+                          ShangHaiJiaoTong University
 
 ****************************************************************************
 
