@@ -19,8 +19,8 @@ utils.o:	utils.h utils.cpp
 model.o:	model.h model.cpp
 	$(CC) -c -o model.o model.cpp
 
-test:
-	
+test: strtokenizer.h strtokenizer.cpp test.h test.cpp
+	$(CC) -o $@ $^
 
 clean:
 	rm $(OBJS) 
