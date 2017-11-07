@@ -63,11 +63,40 @@ public:
 		length = 0;	
 		word2id = NULL;
     }
+
+	document(document &doc) {
+		this->dsLength = doc.dsLength;
+		this->length = doc.length;
+		this->word2id = doc.word2id;
+		this->sentances = new int*[dsLength];
+		for (int i = 0; i < dsLength; i++) {
+			this->sentances[i] = new int[doc.sLength[i]];
+			for (int n = 0; n < sLength[i]; n++) {
+				this->sentances[i][n] = doc.sentances[i][n];
+			}
+		}
+	}
     
     document(int length) {
 		document();
 		this->dsLength = length;
     }
+
+	document(int length, strtokenizer &words, mapword2id* word2id) {
+		this->length = length;
+		dsLength = words.s_count_tokens();
+		sLength = new int[dsLength];
+		this->word2id = word2id;
+		sentances = new int*[dsLength];
+		for (int s = 0; s < dsLength; s++) {
+			sLength[s] = words.count_tokens(s);
+			sentances[s] = new int[sLength[s]];
+			for (int n = 0; n < sLength[s]; n++) {
+				sentances[s][n] = word2id->at(words.token(s,n));
+			}
+		}
+	}
+
     
 	document(int length, int *sLenght, int ** sentances) {
 		document();
@@ -75,8 +104,8 @@ public:
 		this->sLength = new int[length];
 		for (int i = 0; i < length; i++) {
 			this->sLength[i] = sLenght[i];
-	}
-	this->sentances = new int*[length];
+		}
+		this->sentances = new int*[length];
 		for (int i = 0; i < length; i++) {
 			this->sentances[i] = new int[sLenght[i]];
 			for (int j = 0; j < sLenght[i]; j++) {
@@ -193,6 +222,7 @@ public:
     map<int, int> _id2id; // also used only for inference
     int M; // number of documents
     int V; // number of words
+	mapword2id word2id;
     
     dataset() {
 	docs = NULL;

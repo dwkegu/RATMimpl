@@ -112,7 +112,6 @@ int dataset::read_wordmap(string wordmapfile, mapid2word * pid2word) {
 }
 
 int dataset::read_trndata(string dfile, string wordmapfile) {
-    mapword2id word2id;
     
     FILE * fin = fopen(dfile.c_str(), "r");
     if (!fin) {
@@ -145,7 +144,7 @@ int dataset::read_trndata(string dfile, string wordmapfile) {
     for (int i = 0; i < M; i++) {
 	fgets(buff, BUFF_SIZE_LONG - 1, fin);
 	line = buff;
-	strtokenizer strtok(line, " \t\r\n");
+	strtokenizer strtok(line, " \t\r\n.?!", ".?!");
 	int length = strtok.count_tokens();
 
 	if (length <= 0) {
@@ -155,20 +154,18 @@ int dataset::read_trndata(string dfile, string wordmapfile) {
 	    return 1;
 	}
 	
-	// allocate new document
-	document * pdoc = new document(length);
 	
-	for (int j = 0; j < length; j++) {
-	    it = word2id.find(strtok.token(j));
-	    if (it == word2id.end()) {
-		// word not found, i.e., new word
-		pdoc->words[j] = word2id.size();
-		word2id.insert(pair<string, int>(strtok.token(j), word2id.size()));
-	    } else {
-		pdoc->words[j] = it->second;
-	    }
+	for (int j = 0; j < strtok.s_count_tokens(); j++) {
+		for (int n = 0; n < strtok.count_tokens(j); n++) {
+			it = word2id.find(strtok.token(j,n));
+			if (it == word2id.end()) {
+				// word not found, i.e., new word
+				word2id.insert(pair<string, int>(strtok.token(j, n), word2id.size()));
+			}
+		}
 	}
-	
+	// allocate new document
+	document * pdoc = new document(length, strtok, &word2id);
 	// add new doc to the corpus
 	add_doc(pdoc, i);
     }
@@ -211,8 +208,8 @@ int dataset::read_newdata(string dfile, string wordmapfile) {
     fgets(buff, BUFF_SIZE_LONG - 1, fin);
     M = atoi(buff);
     if (M <= 0) {
-	printf("No document available!\n");
-	return 1;
+		printf("No document available!\n");
+		return 1;
     }
     
     // allocate memory for corpus
