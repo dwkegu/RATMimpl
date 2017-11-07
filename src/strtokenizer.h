@@ -31,19 +31,27 @@ using namespace std;
 
 class strtokenizer {
 protected:
+	vector< vector<string> > nTokens;
     vector<string> tokens;
     int idx;
+	int length;
 
 public:
-    strtokenizer(string str, string seperators = " ");    
+    strtokenizer(string str, string seperators);    
+
+	strtokenizer(string str, string wordSep , string sentanceSep);
     
     void parse(string str, string seperators);
+	void parse(string str, string wordSep, string sentanceSep);
     
     int count_tokens();
     string next_token();   
     void start_scan();
 
     string token(int i);
+	string token(int s, int i);
+	int s_count_tokens();
+	int count_tokens(int s);
 };
 
 #endif

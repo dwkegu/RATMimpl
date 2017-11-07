@@ -24,11 +24,45 @@
 #include <string>
 #include <vector>
 #include "strtokenizer.h"
+#include <stdio.h>
  
 using namespace std;
 
 strtokenizer::strtokenizer(string str, string seperators) {
     parse(str, seperators);
+}
+
+strtokenizer::strtokenizer(string str, string wordSep, string sentanceSep) {
+	parse(str, wordSep, sentanceSep);
+}
+
+void strtokenizer::parse(string str, string wordSep, string sentanceSep) {
+	int n = str.length();
+//	printf("%d\n", n);
+	length = 0;
+	int start, sEnd, wEnd;
+	start = str.find_first_not_of(sentanceSep);
+//	printf("%d\n", start);
+	while (start >= 0 && start < n) {
+		sEnd = str.find_first_of(sentanceSep, start);
+//		printf("sEnd: %d\n", sEnd);
+		printf("sentance %d at %d\n", nTokens.size(), sEnd);
+		vector<string> itemToken;
+		while (start < sEnd) {
+			wEnd = str.find_first_of(wordSep, start);
+//			printf("wEnd: %d\n", wEnd);
+			if (wEnd < 0 || wEnd > sEnd) {
+				wEnd = sEnd;
+				break;
+			}
+//			printf("%s\n",str.substr(start, wEnd - start).c_str());
+			itemToken.push_back(str.substr(start, wEnd - start));
+			length++;
+			start = str.find_first_not_of(wordSep, wEnd + 1);
+		}
+		nTokens.push_back(itemToken);
+	}
+
 }
 
 void strtokenizer::parse(string str, string seperators) {
@@ -47,10 +81,11 @@ void strtokenizer::parse(string str, string seperators) {
     }
     
     start_scan();
+	length = tokens.size();
 }
 
 int strtokenizer::count_tokens() {
-    return tokens.size();
+    return length;
 }
 
 void strtokenizer::start_scan() {
@@ -71,5 +106,24 @@ string strtokenizer::token(int i) {
     } else {
 	return "";
     }
+}
+
+int strtokenizer::s_count_tokens() {
+	return nTokens.size();
+}
+int strtokenizer::count_tokens(int s) {
+	if (s > nTokens.size()) {
+		return 0;
+	}
+	return nTokens.at(s).size();
+}
+
+string strtokenizer::token(int s, int i) {
+	if (s >= 0 && s < nTokens.size()&&i>=0&&i<nTokens[s].size()) {
+		return nTokens[s].at(i);
+	}
+	else {
+		return "";
+	}
 }
 
