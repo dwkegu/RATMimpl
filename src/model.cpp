@@ -368,7 +368,7 @@ int model::init(int argc, char ** argv) {
 
 int model::load_model(string model_name) {
     int i, j;
-    
+    //对word:topic进行处理
     string filename = dir + model_name + tassign_suffix;
     FILE * fin = fopen(filename.c_str(), "r");
     if (!fin) {
@@ -390,31 +390,39 @@ int model::load_model(string model_name) {
 			printf("Invalid word-topic assignment file, check the number of docs!\n");
 			return 1;
 		}
-	
-		line = buff;
-		strtokenizer strtok(line, " \t\r\n");
-		int length = strtok.count_tokens();
-	
-		vector<int> words;
-		vector<int> topics;
-		for (j = 0; j < length; j++) {
-			string token = strtok.token(j);
-    
-			strtokenizer tok(token, ":");
-			if (tok.count_tokens() != 2) {
-			printf("Invalid word-topic assignment line!\n");
-			return 1;
-			}
-	    
-			words.push_back(atoi(tok.token(0).c_str()));
-			topics.push_back(atoi(tok.token(1).c_str()));
-		}
-	
 		// allocate and add new document to the corpus
 		//todo
-		document * pdoc = new document(words.size());
+		
+		line = buff;
+		//按句子切分
+		vector<int> words;
+		vector<int> topics;
+		strtokenizer strtokSent(line, ".?!");
+		int dsLength = 0;
+		dsLength = strtokSent.count_tokens();
+		int *sLength = new int[dsLength];
+		document * pdoc = new document(dsLength);
+		pdoc->sLength = sLength;
+		pdoc->sentances = new int*[dsLength];
+		for (int s = 0; s < dsLength; s++) {
+			//按单词切分
+			strtokenizer strtokWord(strtokSent.token(s), " \t\r\n");
+			int length = strtokWord.count_tokens();
+			sLength[s] = length;
+			pdoc->sentances[s] = new int[sLength[s]];
+			for (j = 0; j < length; j++) {
+				string token = strtokWord.token(j);
+				strtokenizer tok(token, ":");
+				if (tok.count_tokens() != 2) {
+					printf("Invalid word-topic assignment line!\n");
+					return 1;
+				}
+				words.push_back(atoi(tok.token(0).c_str()));
+				topics.push_back(atoi(tok.token(1).c_str()));
+				pdoc->sentances[s][j] = atoi(tok.token(0).c_str());
+			}
+		}
 		ptrndata->add_doc(pdoc, i);
-	
 		// assign values for z
 		z[i] = new int*[ptrndata->docs[i]->dsLength];
 		for (j = 0; j < ptrndata->docs[i]->dsLength; j++) {
@@ -425,7 +433,6 @@ int model::load_model(string model_name) {
     }   
     
     fclose(fin);
-    
     return 0;
 }
 
@@ -466,10 +473,11 @@ int model::save_model_tassign(string filename) {
 
     // wirte docs with topic assignments for words
     for (i = 0; i < ptrndata->M; i++) {    
-	for (j = 0; j < ptrndata->docs[i]->length; j++) {
-		//todo
-	   // fprintf(fout, "%d:%d ", ptrndata->docs[i]->words[j], z[i][j]);
-	}
+		for (int s = 0; s < ptrndata->docs[i]->dsLength; s++) {
+			for (int n = 0; n < ptrndata->docs[i]->sLength[s]; n++) {
+				fprintf(fout, "%d:%d ", ptrndata->docs[i]->sentances[s][n], z[i][s][n]);
+			}
+		}
 	fprintf(fout, "\n");
     }
 
@@ -1133,7 +1141,13 @@ void model::compute_theta() {
 }
 
 void model::compute_aTheta() {
-
+	for (int m = 0; m < M; m++) {
+		for (int s = 0; s < ptrndata->docs[m]->dsLength; s++) {
+			for (int k = 0; k < K; k++) {
+				aTheta[m][s][k] = (nds[m][s][k] + alpha) / (ndssum[m][s] + K * alpha);
+			}
+		}
+	}
 }
 
 void model::compute_phi() {
