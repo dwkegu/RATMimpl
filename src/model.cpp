@@ -372,7 +372,7 @@ int model::load_model(string model_name) {
     string filename = dir + model_name + tassign_suffix;
     FILE * fin = fopen(filename.c_str(), "r");
     if (!fin) {
-	printf("Cannot open file %d to load model!\n", filename.c_str());
+	printf("Cannot open file %s to load model!\n", filename.c_str());
 	return 1;
     }
     
@@ -467,8 +467,8 @@ int model::save_model_tassign(string filename) {
     
     FILE * fout = fopen(filename.c_str(), "w");
     if (!fout) {
-	printf("Cannot open file %s to save!\n", filename.c_str());
-	return 1;
+		printf("Cannot open file %s to save!\n", filename.c_str());
+		return 1;
     }
 
     // wirte docs with topic assignments for words
@@ -533,6 +533,7 @@ int model::save_model_others(string filename) {
 
     fprintf(fout, "alpha=%f\n", alpha);
     fprintf(fout, "beta=%f\n", beta);
+	fprintf(fout, "pi=%f\n", pi);
     fprintf(fout, "ntopics=%d\n", K);
     fprintf(fout, "ndocs=%d\n", M);
     fprintf(fout, "nwords=%d\n", V);
@@ -543,37 +544,41 @@ int model::save_model_others(string filename) {
     return 0;
 }
 
+/*
+保存主题-单词概率参数
+@para filename 保存文件名
+*/
 int model::save_model_twords(string filename) {
     FILE * fout = fopen(filename.c_str(), "w");
     if (!fout) {
-	printf("Cannot open file %s to save!\n", filename.c_str());
-	return 1;
+		printf("Cannot open file %s to save!\n", filename.c_str());
+		return 1;
     }
     
     if (twords > V) {
-	twords = V;
+		twords = V;
     }
     mapid2word::iterator it;
     
     for (int k = 0; k < K; k++) {
-	vector<pair<int, double> > words_probs;
-	pair<int, double> word_prob;
-	for (int w = 0; w < V; w++) {
-	    word_prob.first = w;
-	    word_prob.second = phi[k][w];
-	    words_probs.push_back(word_prob);
-	}
+		vector<pair<int, double> > words_probs;
+		pair<int, double> word_prob;
+		for (int w = 0; w < V; w++) {
+			word_prob.first = w;
+			word_prob.second = phi[k][w];
+			words_probs.push_back(word_prob);
+		}
     
-        // quick sort to sort word-topic probability
-	utils::quicksort(words_probs, 0, words_probs.size() - 1);
+			// quick sort to sort word-topic probability
+		utils::quicksort(words_probs, 0, words_probs.size() - 1);
 	
-	fprintf(fout, "Topic %dth:\n", k);
-	for (int i = 0; i < twords; i++) {
-	    it = id2word.find(words_probs[i].first);
-	    if (it != id2word.end()) {
-		fprintf(fout, "\t%s   %f\n", (it->second).c_str(), words_probs[i].second);
-	    }
-	}
+		fprintf(fout, "Topic %dth:\n", k);
+		for (int i = 0; i < twords; i++) {
+			it = id2word.find(words_probs[i].first);
+			if (it != id2word.end()) {
+			fprintf(fout, "\t%s   %f\n", (it->second).c_str(), words_probs[i].second);
+			}
+		}
     }
     
     fclose(fout);    
