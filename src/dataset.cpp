@@ -37,7 +37,7 @@ int dataset::write_wordmap(string wordmapfile, mapword2id * pword2id) {
     }    
     
     mapword2id::iterator it;
-    fprintf(fout, "%d\n", pword2id->size());
+    fprintf(fout, "%d\n", (int)pword2id->size());
     for (it = pword2id->begin(); it != pword2id->end(); it++) {
 	fprintf(fout, "%s %d\n", (it->first).c_str(), it->second);
     }
@@ -253,8 +253,10 @@ int dataset::read_newdata(string dfile, string wordmapfile) {
 	}
 	
 	// allocate memory for new doc
-	document * pdoc = new document(doc);
-	document * _pdoc = new document(_doc);
+//	document * pdoc = new document(doc);
+//	document * _pdoc = new document(_doc);
+	document * pdoc = new document();
+	document * _pdoc = new document();
 	
 	// add new doc
 	add_doc(pdoc, i);
@@ -339,8 +341,10 @@ int dataset::read_newdata_withrawstrs(string dfile, string wordmapfile) {
 	}
 	
 	// allocate memory for new doc
-	document * pdoc = new document(doc, line);
-	document * _pdoc = new document(_doc, line);
+//	document * pdoc = new document(doc, line);
+//	document * _pdoc = new document(_doc, line);
+	document * pdoc = new document();
+	document * _pdoc = new document();
 	
 	// add new doc
 	add_doc(pdoc, i);

@@ -28,6 +28,7 @@
 #include <vector>
 #include <map>
 #include <list>
+#include "strtokenizer.h"
 
 using namespace std;
 
@@ -143,7 +144,7 @@ public:
     }
 	//全部转换成小写
 	void toLower() {
-		for (int i = 0; i < rawStr.length; i++) {
+		for (int i = 0; i < rawStr.length(); i++) {
 			if (rawStr.at(i) >= wordAsciiUpperStart&&rawStr.at(i) <= wordAsciiUpperEnd) {
 				char c = rawStr.at(i);
 				c += ('a' - 'A');

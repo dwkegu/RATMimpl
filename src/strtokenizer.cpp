@@ -46,7 +46,7 @@ void strtokenizer::parse(string str, string wordSep, string sentanceSep) {
 	while (start >= 0 && start < n) {
 		sEnd = str.find_first_of(sentanceSep, start);
 //		printf("sEnd: %d\n", sEnd);
-		printf("sentance %d at %d\n", nTokens.size(), sEnd);
+		printf("sentance %d at %d\n", (int)nTokens.size(), sEnd);
 		vector<string> itemToken;
 		while (start < sEnd) {
 			wEnd = str.find_first_of(wordSep, start);
